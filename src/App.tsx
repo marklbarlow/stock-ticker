@@ -26,7 +26,7 @@ const StockItem = ({
   </tr>
 );
 
-const App = () => {
+export const App = () => {
   const [symbolEntered, setSymbolEntered] = useState('');
   const [stocks, setStocks] = useState<Stocks>({});
   const [connection, setConnection] = useState<StockTickerConnection>();
@@ -116,5 +116,3 @@ const App = () => {
     </div>
   );
 };
-
-export default App;
