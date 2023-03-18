@@ -1,8 +1,30 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Stock, StockTickerConnection, Ticker } from './api';
 
 type Stocks = { [symbol: string]: Stock };
+
+const StockItem = ({
+  onUnsubscribe,
+  stock,
+}: {
+  onUnsubscribe: (symbol: string) => void;
+  stock: Stock;
+}) => (
+  <tr className="border-b">
+    <td>{stock.symbol}</td>
+    <td>{stock.price ?? 'Waiting...'}</td>
+    <td>
+      <button
+        className="btn btn-red my-2"
+        type="button"
+        onClick={() => onUnsubscribe(stock.symbol)}
+      >
+        Unsubscribe
+      </button>
+    </td>
+  </tr>
+);
 
 const App = () => {
   const [symbolEntered, setSymbolEntered] = useState('');
@@ -39,35 +61,28 @@ const App = () => {
     connection?.subscribe(splitSymbols);
   };
 
-  const onUnsubscribe = (symbol: string) => {
-    connection?.unsubscribe(symbol);
+  const onUnsubscribe = useCallback(
+    (symbol: string) => {
+      connection?.unsubscribe(symbol);
 
-    setStocks(s => {
-      const { [symbol]: omit, ...remainder } = s;
-      return remainder;
-    });
-  };
+      setStocks(s => {
+        const { [symbol]: omit, ...remainder } = s;
+        return remainder;
+      });
+    },
+    [connection]
+  );
 
   const stocksList = useMemo(
     () =>
-      Object.values(stocks).map(stock => {
-        return (
-          <tr className="border-b" key={stock.symbol}>
-            <td>{stock.symbol}</td>
-            <td>{stock.price ?? 'Waiting...'}</td>
-            <td>
-              <button
-                className="btn btn-red my-2"
-                type="button"
-                onClick={() => onUnsubscribe(stock.symbol)}
-              >
-                Unsubscribe
-              </button>
-            </td>
-          </tr>
-        );
-      }),
-    [stocks]
+      Object.values(stocks).map(stock => (
+        <StockItem
+          key={stock.symbol}
+          onUnsubscribe={onUnsubscribe}
+          stock={stock}
+        ></StockItem>
+      )),
+    [onUnsubscribe, stocks]
   );
 
   return (
