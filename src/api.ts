@@ -1,6 +1,10 @@
 export interface Stock {
+  changePercentage?: number;
+  changePoint?: number;
   symbol: string;
   price?: number;
+  totalVolume?: string;
+  valid?: boolean;
 }
 
 export interface TickerResponse {
@@ -20,24 +24,45 @@ export interface StockTickerConnection {
   dispose: () => void;
 }
 
+const options = {
+  method: 'GET',
+  headers: {
+    'X-RapidAPI-Key': 'a9b6b03cf8msh40f0fc20099da17p1cbe86jsn321b5ac5e495',
+    'X-RapidAPI-Host': 'realstonks.p.rapidapi.com',
+  },
+};
+
 export const Ticker: StockTicker = {
   connect: (onTick: (stock: Stock) => void): StockTickerConnection => {
+    const invalid = new Set<string>();
     const subscribedSymbols = new Set<string>();
     const timer = setInterval(() => {
-      subscribedSymbols.forEach(s => {
-        const options = {
-          method: 'GET',
-          headers: {
-            'X-RapidAPI-Key':
-              'a9b6b03cf8msh40f0fc20099da17p1cbe86jsn321b5ac5e495',
-            'X-RapidAPI-Host': 'realstonks.p.rapidapi.com',
-          },
-        };
+      subscribedSymbols.forEach(async s => {
+        if (!invalid.has(s)) {
+          try {
+            const response = await fetch(
+              `https://realstonks.p.rapidapi.com/${s}`,
+              options
+            );
 
-        fetch(`https://realstonks.p.rapidapi.com/${s}`, options)
-          .then(response => response.json() as Promise<TickerResponse>)
-          .then(response => onTick({ price: response.price, symbol: s }))
-          .catch(err => console.error(err));
+            if (response?.ok) {
+              const tickerResponse: TickerResponse = await response.json();
+              onTick({
+                changePercentage: tickerResponse.change_percentage,
+                changePoint: tickerResponse.change_point,
+                price: tickerResponse.price,
+                symbol: s,
+                totalVolume: tickerResponse.total_vol,
+                valid: true,
+              });
+            } else {
+              invalid.add(s);
+              onTick({ symbol: s, valid: false });
+            }
+          } catch (error) {
+            console.error(error);
+          }
+        }
       });
     }, 2000);
 

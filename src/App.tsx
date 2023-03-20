@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Stock, StockTickerConnection, Ticker } from './api';
 
-type Stocks = { [symbol: string]: Stock };
+type StockForDisplay = Stock & { change?: number };
+type Stocks = Record<string, StockForDisplay>;
 
 const Logo = () => (
   <svg
@@ -22,11 +23,15 @@ const StockItem = ({
   stock,
 }: {
   onUnsubscribe: (symbol: string) => void;
-  stock: Stock;
+  stock: StockForDisplay;
 }) => (
   <tr className="border-b">
     <td>{stock.symbol}</td>
-    <td>{stock.price ?? 'Waiting...'}</td>
+    <td>{stock.valid === false ? 'Invalid' : stock.price ?? 'Waiting...'}</td>
+    <td>{stock.change ?? ''}</td>
+    <td>{stock.changePercentage ?? ''}</td>
+    <td>{stock.changePoint ?? ''}</td>
+    <td>{stock.totalVolume ?? ''}</td>
     <td>
       <button
         className="btn btn-red my-2"
@@ -39,6 +44,12 @@ const StockItem = ({
   </tr>
 );
 
+const calculateChange = (newStock: Stock, oldStock?: Stock) => {
+  return oldStock?.price && newStock.price
+    ? Math.abs(oldStock.price - newStock.price)
+    : undefined;
+};
+
 export const App = () => {
   const [symbolEntered, setSymbolEntered] = useState('');
   const [stocks, setStocks] = useState<Stocks>({});
@@ -50,7 +61,10 @@ export const App = () => {
         Object.hasOwn(s, stock.symbol)
           ? {
               ...s,
-              [stock.symbol]: { symbol: stock.symbol, price: stock.price },
+              [stock.symbol]: {
+                change: calculateChange(stock, s[stock.symbol]),
+                ...stock,
+              },
             }
           : s
       );
@@ -128,11 +142,15 @@ export const App = () => {
           Subscribe
         </button>
       </div>
-      <table className="table-fixed text-left text-sm font-light max-w-xl ">
+      <table className="table-fixed text-left text-sm font-light max-w-2xl">
         <thead className="border-b font-medium bg-neutral-50 ">
           <tr>
             <th>Symbol</th>
             <th>Price</th>
+            <th>Change</th>
+            <th>Change Percentage</th>
+            <th>Change Point</th>
+            <th>Total Volume</th>
             <th>Subscription</th>
           </tr>
         </thead>
