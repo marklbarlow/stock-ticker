@@ -18,6 +18,10 @@ const Logo = () => (
   </svg>
 );
 
+const defaultFormat = new Intl.NumberFormat('en-GB', {
+  maximumFractionDigits: 2,
+});
+
 const StockItem = ({
   onUnsubscribe,
   stock,
@@ -28,7 +32,9 @@ const StockItem = ({
   <tr className="border-b">
     <td>{stock.symbol}</td>
     <td>{stock.valid === false ? 'Invalid' : stock.price ?? 'Waiting...'}</td>
-    <td>{stock.change ?? ''}</td>
+    <td>
+      {stock.change === undefined ? '' : defaultFormat.format(stock.change)}
+    </td>
     <td>{stock.changePercentage ?? ''}</td>
     <td>{stock.changePoint ?? ''}</td>
     <td>{stock.totalVolume ?? ''}</td>
@@ -51,7 +57,7 @@ const calculateChange = (newStock: Stock, oldStock?: Stock) => {
 };
 
 export const App = () => {
-  const [symbolEntered, setSymbolEntered] = useState('');
+  const [symbols, setSymbols] = useState('');
   const [stocks, setStocks] = useState<Stocks>({});
   const [connection, setConnection] = useState<StockTickerConnection>();
 
@@ -74,7 +80,8 @@ export const App = () => {
   }, []);
 
   const onSubscribe = () => {
-    const splitSymbols = symbolEntered.split(/[ ,]+/);
+    const splitSymbols = symbols.split(/[ ,]+/);
+    setSymbols('');
 
     setStocks(s => {
       const stocksToAdd = splitSymbols.reduce((acc, curr) => {
@@ -98,6 +105,11 @@ export const App = () => {
       });
     },
     [connection]
+  );
+
+  const canSubscribe = useMemo(
+    () => symbols.match(/^[A-Z]+(?:,\s*[A-Z]+)*$/),
+    [symbols]
   );
 
   const stocksList = useMemo(
@@ -132,13 +144,19 @@ export const App = () => {
       </h4>
       <div className="flex flex-row gap-2">
         <input
-          className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline w-80"
           type="text"
           placeholder="Stock symbols"
-          onChange={event => setSymbolEntered(event.target.value)}
+          value={symbols}
+          onChange={event => setSymbols(event.target.value.toUpperCase())}
         />
 
-        <button className="btn btn-blue" type="button" onClick={onSubscribe}>
+        <button
+          className="btn btn-blue"
+          type="button"
+          onClick={onSubscribe}
+          disabled={!canSubscribe}
+        >
           Subscribe
         </button>
       </div>
